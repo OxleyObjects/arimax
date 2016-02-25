@@ -279,7 +279,6 @@ def benchmark():
     without_mp()
 
 
-
 def example():
 
     # Make seasonal AR(2)
@@ -301,7 +300,6 @@ def example():
     # Fit model
     best_params = seasonal_auto_arima(y=y_tr, p_max=10, fourier_args=[("DA", 10)])
     best_p, best_fourier = best_params
-    print best_p, best_fourier
 
     exog_tr = fourier(y_tr, best_fourier[0][0], best_fourier[0][1])
     exog_te = fourier(y_te, best_fourier[0][0], best_fourier[0][1])
@@ -310,15 +308,15 @@ def example():
     model.fit(y_tr, exog_tr)
 
     y_te_hat = model.predict(start_date=y_te.index[0], end_date=y_te.index[-1], 
-                             exog=exog_te, nsims=100, njobs=-1)
+                             exog=exog_te, nsims=300, njobs=-1)
 
     # Plot
     plt.figure()
-    plt.plot(y_te.index, y_te, lw=1.0, label="y", alpha=0.5)
+    #plt.plot(y_te.index, y_te, lw=1.0, label="y", alpha=0.5, color="grey")
     plt.plot(y_te_hat.index, y_te_hat.mean(axis=1), label="y_hat", alpha=1.0)
     lower = np.percentile(y_te_hat.values, 5, axis=1)
     upper = np.percentile(y_te_hat.values, 95, axis=1)
-    plt.fill_between(y_te_hat.index, lower, upper, alpha=0.5, facecolor="green", interpolate=True)
+    plt.fill_between(y_te_hat.index, lower, upper, alpha=0.25, facecolor="green", interpolate=True)
     plt.xticks(rotation="90")
     plt.tight_layout()
 
@@ -327,4 +325,4 @@ def example():
 
 
 if __name__ == "__main__":
-    benchmark()
+    example()
