@@ -1,11 +1,13 @@
-import pandas as pd
+from __future__ import absolute_import
 import numpy as np
-import sklearn.linear_model as lm
+import pandas as pd
 import itertools as it
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import numba as nb
 import time
+import sklearn.linear_model as lm
+from arimax.utils import fourier
 
 
 ncores = mp.cpu_count()
@@ -181,56 +183,6 @@ def _predict(y_pred, dy_pred, i_dates,
     return y_pred
 
 
-def fourier(y, freq, k):
-    """
-    Computes fourier series for seasonality.
-
-    Parameters
-    ----------
-    y: TimeSeries
-    freq: str like 'ab'
-        a = ts freq
-        b = seasonal period
-        allowed values: DA, DW, MM, WW
-    m: float
-        period length
-    k: int
-        number of fourier terms
-
-    Example
-    -------
-    >>> ndays = 800
-    >>> date_index = pd.date_range("1/1/2014", periods=800, freq="D")
-    >>> daily = pd.Series(np.arange(800), index=date_index)
-    >>> weekly_terms = fourier(daily, "DW", 5)
-    >>> annual_terms = fourier(daily, "DA", 5)
-    """
-
-    days_per_year = 365.25
-    days_per_week = 7.0
-    if freq == "DA":
-        t = y.index.dayofyear/days_per_year
-    elif freq == "DW":
-        t = (y.index.dayofweek + 1)/days_per_week
-    elif freq == "MM":
-        months_per_year = 12.0
-        t = (y.index.month + 1)/months_per_year
-    elif freq == "WW":
-        weeks_per_year = days_per_year/days_per_week
-        t = (y.index.week + 1)/weeks_per_year
-    else:
-        raise NotImplementedError("frequency %s not supported." % freq)
-
-    n = len(y) 
-    krange = np.arange(1, k + 1)
-    X = np.tile(krange, (n, 1))
-    X = 2*np.pi*(X.T*t).T
-    res = np.c_[np.sin(X), np.cos(X)]
-    cols = ["fourier_sin_%d" % i for i in krange] + \
-           ["fourier_cos_%d" % i for i in krange]
-    return pd.DataFrame(res, index=y.index, columns=cols)
-
-
 def auto_arima(y, p_max, exog=None):
     """
     Choose lag length to minimize AIC.
@@ -306,8 +258,8 @@ def benchmark():
     xs = pd.Series(np.random.randn(N), index=pd.date_range("1/1/2015", periods=N)) 
     arima = ARIMA(p=20)
     arima.fit(xs)
-    npreds = 100000
-    start_date, end_date = "1/1/2017", "12/31/2017"
+    npreds = 1000000
+    start_date, end_date = "1/1/2017", "1/1/2026"
     ndates = len(pd.date_range(start_date, end_date))
     nsims = int(1.0*npreds/ndates)
     print "npreds, nsims = %d, %d" % (ndates, nsims)
