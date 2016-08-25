@@ -42,7 +42,7 @@ def fourier(y, freq, k):
     else:
         raise NotImplementedError("frequency %s not supported." % freq)
 
-    n = len(y) 
+    n = len(y)
     krange = np.arange(1, k + 1)
     X = np.tile(krange, (n, 1))
     X = 2*np.pi*(X.T*t).T
@@ -50,5 +50,3 @@ def fourier(y, freq, k):
     cols = ["fourier_sin_%d" % i for i in krange] + \
            ["fourier_cos_%d" % i for i in krange]
     return pd.DataFrame(res, index=y.index, columns=cols)
-
-
