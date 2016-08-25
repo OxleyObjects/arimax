@@ -4,7 +4,6 @@ import pandas as pd
 import itertools as it
 import matplotlib.pyplot as plt
 import multiprocessing as mp
-import numba as nb
 import time
 import sklearn.linear_model as lm
 from arimax.utils import fourier
@@ -14,7 +13,7 @@ ncores = mp.cpu_count()
 
 
 class ARIMA(object):
-    
+
     def __init__(self, p, d=0, fit_dates=None):
         """
         Parameters
@@ -45,7 +44,7 @@ class ARIMA(object):
     def _lags(self):
         lags = xrange(1, self.p + 1)
         return {"AR%d" % lag: lag for lag in lags}
-        
+
     def _set_dmatrices(self, y, exog):
         self._freq = y.index.freq
         if self.d:
@@ -56,12 +55,12 @@ class ARIMA(object):
         endog = pd.DataFrame(index=y.index, columns=self._lags.keys())
         for lagname, lag in self._lags.iteritems():
             endog[lagname] = dy.shift(lag)
-        
+
         if exog is not None:
             data = pd.concat([endog, exog], axis=1)
         else:
             data = endog
-        
+
         data["y"] = y
         data["dy"] = dy
         data = data.dropna()
@@ -72,7 +71,7 @@ class ARIMA(object):
         self._dy = data["dy"]
         self._y = data["y"]
         self.fit_dates = data.index
-        
+
     def fit(self, y, exog=None, plot=False):
         """
         Parameters
@@ -95,7 +94,7 @@ class ARIMA(object):
             plt.plot(self._dy.index, dy_hat, label="y_hat")
             plt.legend()
             plt.show()
-    
+
     def predict(self, start_date, end_date, exog=None, nsims=0, njobs=1):
         """
         Parameters
@@ -110,14 +109,14 @@ class ARIMA(object):
         TimeSeries DataFrame
         """
         start_date, end_date = pd.to_datetime((start_date, end_date))
-        
+
         offset = pd.tseries.frequencies.to_offset(self._freq)
         y_pred = self._y.loc[:(start_date - offset)].copy()
         if self.d > 0:
             dy_pred = y_pred.diff(self.d)
         else:
             dy_pred = y_pred.copy()
-        
+
         dates = pd.date_range(self._y.index.min(), end_date, freq=self._freq)
         y_pred = y_pred.reindex(dates).values
         dy_pred = dy_pred.reindex(dates).values
@@ -139,7 +138,7 @@ class ARIMA(object):
             sigma = 0.0
 
         args = (y_pred.copy(), dy_pred.copy(), i_dates,
-                exog, self._clf.intercept_, self._clf.coef_, sigma, 
+                exog, self._clf.intercept_, self._clf.coef_, sigma,
                 int_offset, self.d, maxlag)
         npreds = len(i_pred_dates)*nruns
         min_mp_runs = 10
@@ -225,7 +224,7 @@ def seasonal_auto_arima(y, p_max, fourier_args, exog=None):
     best_kcombo = None
     best_p = None
     for kcombo in it.product(*ranges):
-        seasonality = pd.concat([fourier(y, f, k) 
+        seasonality = pd.concat([fourier(y, f, k)
                                  for (f, k) in it.izip(freqs, kcombo)], axis=1)
         if exog is not None:
             exog = pd.concat([exog, seasonality], axis=1)
@@ -255,7 +254,7 @@ def timed(f):
 def benchmark():
     N = 10000
 
-    xs = pd.Series(np.random.randn(N), index=pd.date_range("1/1/2015", periods=N)) 
+    xs = pd.Series(np.random.randn(N), index=pd.date_range("1/1/2015", periods=N))
     arima = ARIMA(p=20)
     arima.fit(xs)
     npreds = 1000000
@@ -307,12 +306,11 @@ def example():
     model = ARIMA(p=best_p)
     model.fit(y_tr, exog_tr)
 
-    y_te_hat = model.predict(start_date=y_te.index[0], end_date=y_te.index[-1], 
+    y_te_hat = model.predict(start_date=y_te.index[0], end_date=y_te.index[-1],
                              exog=exog_te, nsims=300, njobs=-1)
 
     # Plot
     plt.figure()
-    #plt.plot(y_te.index, y_te, lw=1.0, label="y", alpha=0.5, color="grey")
     plt.plot(y_te_hat.index, y_te_hat.mean(axis=1), label="y_hat", alpha=1.0)
     lower = np.percentile(y_te_hat.values, 5, axis=1)
     upper = np.percentile(y_te_hat.values, 95, axis=1)
